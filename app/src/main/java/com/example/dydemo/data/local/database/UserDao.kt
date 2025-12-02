@@ -7,46 +7,43 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import com.example.dydemo.data.local.entity.UserEntity
-import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface UserDao {
-
-    @Query("SELECT * FROM following_users WHERE followTimestamp IS NOT NULL ORDER BY isSpecialFollow DESC, id ASC")
-    fun getFollowingPagingSourceByComprehensive(): PagingSource<Int, UserEntity>
-
-    @Query("SELECT * FROM following_users WHERE followTimestamp IS NOT NULL ORDER BY followTimestamp DESC, id ASC")
-    fun getFollowingPagingSourceByTime(): PagingSource<Int, UserEntity>
-
-    // --- 新增：用于手动分页的挂起函数 ---
-    @Query("SELECT * FROM following_users WHERE followTimestamp IS NOT NULL ORDER BY isSpecialFollow DESC, id ASC LIMIT :limit OFFSET :offset")
-    suspend fun getFollowingByComprehensive(limit: Int, offset: Int): List<UserEntity>
-
-    @Query("SELECT * FROM following_users WHERE followTimestamp IS NOT NULL ORDER BY followTimestamp DESC, id ASC LIMIT :limit OFFSET :offset")
-    suspend fun getFollowingByTime(limit: Int, offset: Int): List<UserEntity>
-    // -------------------------------------
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(users: List<UserEntity>)
 
     @Update
-    suspend fun update(user: UserEntity)
+    suspend fun updateUser(user: UserEntity)
 
-    @Query("SELECT * FROM following_users WHERE id = :userId")
+    @Query("SELECT * FROM users WHERE id = :userId")
     suspend fun getUserById(userId: Int): UserEntity?
 
-    @Query("UPDATE following_users SET customRemark = :newRemark WHERE id = :userId")
-    suspend fun updateRemark(userId: Int, newRemark: String?)
+    @Query("UPDATE users SET customRemark = :remark WHERE id = :userId")
+    suspend fun updateRemark(userId: Int, remark: String?)
 
-    @Query("UPDATE following_users SET isSpecialFollow = :isSpecialFollow WHERE id = :userId")
-    suspend fun updateSpecialFollow(userId: Int, isSpecialFollow: Boolean)
+    @Query("UPDATE users SET isPinned = :isPinned WHERE id = :userId")
+    suspend fun updatePinnedStatus(userId: Int, isPinned: Boolean)
 
-    @Query("SELECT COUNT(id) FROM following_users WHERE followTimestamp IS NOT NULL")
-    fun getFollowingCount(): Flow<Int>
+    @Query("SELECT * FROM users ORDER BY isPinned DESC, lastMessageTimestamp DESC")
+    fun getConversationPagingSource(): PagingSource<Int, UserEntity>
 
-    @Query("UPDATE following_users SET followTimestamp = :timestamp WHERE id = :userId")
-    suspend fun updateFollowTimestamp(userId: Int, timestamp: Long?)
-
-    @Query("SELECT COUNT(id) FROM following_users")
+    @Query("SELECT * FROM users ORDER BY isPinned DESC, lastMessageTimestamp DESC LIMIT :limit OFFSET :offset")
+    suspend fun getUsersForPaging(limit: Int, offset: Int): List<UserEntity>
+    
+    @Query("SELECT COUNT(id) FROM users")
     suspend fun countUsers(): Int
+
+    /**
+     * 根据昵称或备注搜索用户，返回匹配的用户ID列表
+     */
+    @Query("SELECT id FROM users WHERE nickname LIKE '%' || :query || '%' OR customRemark LIKE '%' || :query || '%'")
+    suspend fun searchUserIdsByNameOrRemark(query: String): List<Int>
+
+    /**
+     * 根据ID列表获取用户实体列表
+     */
+    @Query("SELECT * FROM users WHERE id IN (:userIds)")
+    suspend fun getUsersByIds(userIds: List<Int>): List<UserEntity>
 }
