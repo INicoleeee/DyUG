@@ -1,12 +1,9 @@
 package com.example.dydemo.di
 
-/**
- * 依赖注入层：Hilt配置应独立于数据层
- * 注入数据库、DAO、Repository等依赖
- */
 import android.content.Context
 import androidx.room.Room
 import com.example.dydemo.data.local.database.AppDatabase
+import com.example.dydemo.data.local.database.MessageDao
 import com.example.dydemo.data.local.database.UserDao
 import dagger.Module
 import dagger.Provides
@@ -16,7 +13,7 @@ import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
 @Module
-@InstallIn(SingletonComponent::class) // 单例组件，生命周期与应用一致
+@InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
     @Provides
@@ -25,7 +22,7 @@ object DatabaseModule {
         return Room.databaseBuilder(
             context,
             AppDatabase::class.java,
-            "douyin_clone_db" // 数据库名称
+            "douyin_clone_db"
         )
             .fallbackToDestructiveMigration()
             .build()
@@ -35,5 +32,14 @@ object DatabaseModule {
     @Singleton
     fun provideUserDao(database: AppDatabase): UserDao {
         return database.userDao()
+    }
+
+    /**
+     * 新增：提供 MessageDao 的依赖
+     */
+    @Provides
+    @Singleton
+    fun provideMessageDao(database: AppDatabase): MessageDao {
+        return database.messageDao()
     }
 }
