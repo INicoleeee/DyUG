@@ -20,5 +20,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "DyDemo"
+rootProject.name = "DyUG"
 include(":app")
