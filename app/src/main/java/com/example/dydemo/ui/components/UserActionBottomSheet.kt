@@ -1,20 +1,33 @@
 package com.example.dydemo.ui.components
 
-/**
- * 底部操作弹窗
- */
-
 import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -27,20 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.dydemo.domain.model.User
-import com.example.dydemo.domain.model.UserAction
-import com.example.dydemo.ui.theme.DY_PrimaryRed
-import com.example.dydemo.viewmodel.FollowingViewModel
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.*
 
-
-// 格式化时间的函数
-fun formatTimestamp(timestamp: Long): String {
-    val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-    return formatter.format(Date(timestamp))
-}
 
 @SuppressLint("LocalContextResourcesRead")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -48,41 +48,20 @@ fun formatTimestamp(timestamp: Long): String {
 fun UserActionBottomSheet(
     user: User,
     onDismiss: () -> Unit,
-    viewModel: FollowingViewModel,
-    pendingRemarks: Map<Int, String?>,  // 保存关注状态的中间存储内容
-    pendingSpecialFollows: Map<Int, Boolean>, // 保存特别关注状态的中间存储内容
-    onOptionSelected: (UserAction) -> Unit,
-    placeholder: Painter?
+    onSetPinned: (Boolean) -> Unit,
+    onEditRemark: () -> Unit,
+    placeholder: Painter? = null
 ) {
-    val displayRemark = if (pendingRemarks.containsKey(user.id)) pendingRemarks[user.id] else user.customRemark
 
-    val displayName = remember(displayRemark, user.nickname) {
-        if (!displayRemark.isNullOrBlank()) {
-            displayRemark
-        } else {
-            user.nickname
-        }
+    val displayName = remember(user.customRemark, user.nickname) {
+        user.customRemark?.takeIf { it.isNotBlank() } ?: user.nickname
     }
-    val hasRemark = !displayRemark.isNullOrBlank()
-
-    val subtitleText = remember(hasRemark, user.nickname, user.id, user.followTimestamp) {
-        val followTimeText = user.followTimestamp?.let { timestamp ->
-            "关注时间: ${formatTimestamp(timestamp)}"
-        } ?: ""
-
-        val remarkPrefix = if (hasRemark) {
-            "原名: ${user.nickname} ｜"
-        } else {
-            ""
-        }
-        "${remarkPrefix}ID: ${user.id}\n$followTimeText"
+    val subtitleText = remember(user.nickname) {
+        "抖音号: ${user.nickname}"
     }
-    val scope = rememberCoroutineScope()
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface,
         dragHandle = null
     ) {
@@ -163,12 +142,7 @@ fun UserActionBottomSheet(
                         .fillMaxWidth()
                         .weight(1.1f)
                 ) {
-                    SpecialFollowItem(
-                        user = user,
-                        viewModel = viewModel,
-                        scope = scope,
-                        pendingSpecialFollows = pendingSpecialFollows
-                    )
+                    PinnedChatItem(user = user, onSetPinned = onSetPinned)
                 }
 
                 Spacer(
@@ -185,32 +159,13 @@ fun UserActionBottomSheet(
                     iconPositionRight = true,
                     onClick = {
                         onDismiss()
-                        onOptionSelected(UserAction.REMARK_EDIT)
+                        onEditRemark()
                     },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp)
                 )
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            ActionItem(
-                icon = Icons.Default.Clear,
-                text = "取消关注",
-                textColor = DY_PrimaryRed,
-                onClick = {
-                    viewModel.onFollowToggle(user.id, true)
-                    onDismiss()
-                },
-                iconPositionRight = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.background)
-            )
-
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
@@ -245,13 +200,10 @@ private fun ActionItem(
 }
 
 @Composable
-private fun SpecialFollowItem(
+private fun PinnedChatItem(
     user: User,
-    viewModel: FollowingViewModel,
-    scope: CoroutineScope,
-    pendingSpecialFollows: Map<Int, Boolean>
+    onSetPinned: (Boolean) -> Unit
 ) {
-    val isSpecialFollow = pendingSpecialFollows[user.id] ?: user.isSpecialFollow
 
     Row(
         modifier = Modifier
@@ -262,7 +214,7 @@ private fun SpecialFollowItem(
     ) {
         Column(modifier = Modifier.height(64.dp)) {
             Text(
-                text = "特别关注",
+                text = "置顶聊天",
                 color = MaterialTheme.colorScheme.onBackground,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold
@@ -270,7 +222,7 @@ private fun SpecialFollowItem(
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "作品优先推荐，更新及时提示",
+                    text = "置顶后，该聊天会固定在列表顶部",
                     color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 12.sp
                 )
@@ -283,14 +235,6 @@ private fun SpecialFollowItem(
                 )
             }
         }
-
-        Switch(
-            checked = isSpecialFollow,
-            onCheckedChange = { isChecked ->
-                scope.launch {
-                    viewModel.onToggleSpecialFollow(user.id, isChecked)
-                }
-            },
-        )
+        Switch(checked = user.isPinned, onCheckedChange = onSetPinned)
     }
 }
