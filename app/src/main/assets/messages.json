@@ -1,0 +1,49 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "nickname": "设计师小王",
+      "avatarUrl": "https://picsum.photos/id/1012/200/200.webp",
+      "customRemark": null,
+      "isPinned": true
+    },
+    {
+      "id": 2,
+      "nickname": "产品经理阿张",
+      "avatarUrl": "https://picsum.photos/id/1025/200/200.webp",
+      "customRemark": "张哥",
+      "isPinned": false
+    },
+    {
+      "id": 3,
+      "nickname": "程序员老李",
+      "avatarUrl": "https://picsum.photos/id/103/200/200.webp",
+      "customRemark": null,
+      "isPinned": false
+    }
+  ],
+  "messages": [
+    {
+      "senderId": 1,
+      "timestamp": 1672502400000,
+      "messageType": "TEXT",
+      "textContent": "这是第一条很长很长的测试消息，主要是为了测试摘要截断功能。",
+      "isRead": false
+    },
+    {
+      "senderId": 2,
+      "timestamp": 1672416000000,
+      "messageType": "IMAGE",
+      "imageUrl": "https://picsum.photos/id/237/600/800.webp",
+      "isRead": true
+    },
+    {
+      "senderId": 3,
+      "timestamp": 1672243200000,
+      "messageType": "CARD",
+      "cardText": "恭喜你获得一张优惠券！",
+      "cardButtonText": "立即领取",
+      "isRead": false
+    }
+  ]
+}
