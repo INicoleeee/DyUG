@@ -32,15 +32,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
 import com.example.dydemo.domain.model.User
-
 
 @SuppressLint("LocalContextResourcesRead")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -49,8 +45,7 @@ fun UserActionBottomSheet(
     user: User,
     onDismiss: () -> Unit,
     onSetPinned: (Boolean) -> Unit,
-    onEditRemark: () -> Unit,
-    placeholder: Painter? = null
+    onEditRemark: () -> Unit
 ) {
 
     val displayName = remember(user.customRemark, user.nickname) {
@@ -90,17 +85,8 @@ fun UserActionBottomSheet(
         Column(modifier = Modifier.padding(end=16.dp, start = 16.dp, bottom = 16.dp)) {
             Spacer(Modifier.width(16.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                AsyncImage(
-                    model = user.avatarUrl,
-                    contentDescription = "用户头像",
-                    contentScale = ContentScale.Crop,
-                    placeholder = placeholder,
-                    error = placeholder,
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surface)
-                )
+                // 使用新的 UserAvatar 组件
+                UserAvatar(user = user, size = 80.dp)
 
                 Spacer(Modifier.width(16.dp))
 

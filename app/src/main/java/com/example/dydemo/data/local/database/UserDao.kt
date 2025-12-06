@@ -19,6 +19,9 @@ interface UserDao {
 
     @Query("SELECT * FROM users WHERE id = :userId")
     suspend fun getUserById(userId: Int): UserEntity?
+    
+    @Query("SELECT id FROM users")
+    suspend fun getAllUserIds(): List<Int>
 
     @Query("UPDATE users SET customRemark = :remark WHERE id = :userId")
     suspend fun updateRemark(userId: Int, remark: String?)
@@ -35,15 +38,12 @@ interface UserDao {
     @Query("SELECT COUNT(id) FROM users")
     suspend fun countUsers(): Int
 
-    /**
-     * 根据昵称或备注搜索用户，返回匹配的用户ID列表
-     */
-    @Query("SELECT id FROM users WHERE nickname LIKE '%' || :query || '%' OR customRemark LIKE '%' || :query || '%'")
-    suspend fun searchUserIdsByNameOrRemark(query: String): List<Int>
+    @Query("SELECT * FROM users WHERE nickname LIKE '%' || :query || '%' OR customRemark LIKE '%' || :query || '%'")
+    suspend fun searchUsersByNameOrRemark(query: String): List<UserEntity>
 
-    /**
-     * 根据ID列表获取用户实体列表
-     */
     @Query("SELECT * FROM users WHERE id IN (:userIds)")
     suspend fun getUsersByIds(userIds: List<Int>): List<UserEntity>
+
+    @Query("UPDATE users SET lastMessageTimestamp = :timestamp WHERE id = :userId")
+    suspend fun updateLastMessageTimestamp(userId: Int, timestamp: Long)
 }

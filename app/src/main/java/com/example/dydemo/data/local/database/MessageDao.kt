@@ -11,6 +11,9 @@ import kotlinx.coroutines.flow.Flow
 interface MessageDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(message: MessageEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(messages: List<MessageEntity>)
 
     @Query("SELECT * FROM messages WHERE senderId = :userId ORDER BY timestamp ASC")
@@ -32,8 +35,8 @@ interface MessageDao {
     suspend fun countMessages(): Int
 
     /**
-     * 根据消息内容搜索，返回匹配的发送者ID列表
+     * 修复：根据消息内容搜索，返回完整的消息实体列表
      */
-    @Query("SELECT DISTINCT senderId FROM messages WHERE textContent LIKE '%' || :query || '%' OR cardText LIKE '%' || :query || '%'")
-    suspend fun searchUserIdsByMessageContent(query: String): List<Int>
+    @Query("SELECT * FROM messages WHERE textContent LIKE '%' || :query || '%' OR cardText LIKE '%' || :query || '%' ORDER BY timestamp DESC")
+    suspend fun searchMessagesByContent(query: String): List<MessageEntity>
 }

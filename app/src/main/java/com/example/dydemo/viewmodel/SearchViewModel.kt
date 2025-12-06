@@ -14,7 +14,8 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -38,16 +39,13 @@ class SearchViewModel @Inject constructor(
             searchQuery
                 .debounce(300)
                 .distinctUntilChanged()
+                .onEach { _isSearching.value = it.isNotBlank() }
                 .flatMapLatest { query ->
                     if (query.isBlank()) {
-                        _searchResults.value = emptyList()
-                        return@flatMapLatest flowOf(emptyList<Conversation>())
-                    }
-                    _isSearching.value = true
-                    try {
-                        flowOf(repository.searchConversations(query))
-                    } catch (e: Exception) {
-                        flowOf(emptyList<Conversation>())
+                        flow { emit(emptyList()) }
+                    } else {
+                        // 使用 flow { } 包装 suspend 函数的调用
+                        flow { emit(repository.searchConversations(query)) }
                     }
                 }
                 .collect { results ->
@@ -61,13 +59,9 @@ class SearchViewModel @Inject constructor(
         _searchQuery.value = query
     }
 
-    /**
-     * 新增：处理来自搜索结果列表的卡片点击
-     */
     fun handleCardActionFromSearch(messageId: Long) {
         viewModelScope.launch {
             repository.updateCardInteraction(messageId, CardInteractionState.CONFIRMED)
-            // 重新执行搜索以刷新结果
             val currentQuery = _searchQuery.value
             if (currentQuery.isNotBlank()) {
                 _searchResults.value = repository.searchConversations(currentQuery)

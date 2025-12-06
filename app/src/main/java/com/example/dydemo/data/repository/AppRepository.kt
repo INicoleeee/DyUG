@@ -4,11 +4,13 @@ import android.content.Context
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
+import androidx.paging.map
+import androidx.room.withTransaction
+import com.example.dydemo.data.local.database.AppDatabase
 import com.example.dydemo.data.local.database.MessageDao
 import com.example.dydemo.data.local.database.UserDao
 import com.example.dydemo.data.local.entity.MessageEntity
 import com.example.dydemo.data.local.entity.UserEntity
-import com.example.dydemo.data.paging.ConversationPagingSource
 import com.example.dydemo.domain.mapper.MessageMapper.toMessage
 import com.example.dydemo.domain.mapper.UserMapper.toUser
 import com.example.dydemo.domain.model.CardInteractionState
@@ -30,6 +32,7 @@ data class InitialData(
 )
 
 class AppRepository @Inject constructor(
+    private val db: AppDatabase,
     private val userDao: UserDao,
     private val messageDao: MessageDao,
     @ApplicationContext private val context: Context
@@ -37,35 +40,67 @@ class AppRepository @Inject constructor(
 
     fun getConversations(): Flow<PagingData<Conversation>> {
         return Pager(
-            config = PagingConfig(
-                pageSize = 20,
-                enablePlaceholders = false
-            ),
-            // 修复：每次都创建一个新的 PagingSource 实例
-            pagingSourceFactory = { ConversationPagingSource(userDao, messageDao) }
-        ).flow
-    }
-
-    fun getChatMessages(userId: Int): Flow<List<Message>> {
-        return messageDao.getMessagesForUser(userId).map {
-            it.map { entity -> entity.toMessage() }
+            config = PagingConfig(pageSize = 20, enablePlaceholders = false),
+            pagingSourceFactory = { userDao.getConversationPagingSource() }
+        ).flow.map { pagingData: PagingData<UserEntity> ->
+            pagingData.map { userEntity ->
+                val latestMessageEntity = messageDao.getLatestMessageForUser(userEntity.id)
+                val unreadCount = messageDao.getUnreadCountForUser(userEntity.id)
+                Conversation(
+                    user = userEntity.toUser(),
+                    latestMessage = latestMessageEntity?.toMessage(),
+                    unreadCount = unreadCount
+                )
+            }
         }
     }
 
-    suspend fun searchConversations(query: String): List<Conversation> {
-        val userIdsFromName = userDao.searchUserIdsByNameOrRemark(query)
-        val userIdsFromMessage = messageDao.searchUserIdsByMessageContent(query)
-        val allUserIds = (userIdsFromName + userIdsFromMessage).distinct()
-        val userEntities = userDao.getUsersByIds(allUserIds)
+    // 修复：添加缺失的方法
+    suspend fun getUserById(userId: Int): UserEntity? {
+        return userDao.getUserById(userId)
+    }
 
-        return userEntities.map { userEntity ->
-            val latestMessageEntity = messageDao.getLatestMessageForUser(userEntity.id)
-            val unreadCount = messageDao.getUnreadCountForUser(userEntity.id)
+    suspend fun getAllUserIds(): List<Int> = userDao.getAllUserIds()
+
+    suspend fun insertNewMessage(message: MessageEntity) {
+        db.withTransaction {
+            messageDao.insert(message)
+            userDao.updateLastMessageTimestamp(message.senderId, message.timestamp)
+        }
+    }
+
+    fun getChatMessages(userId: Int): Flow<List<Message>> {
+        return messageDao.getMessagesForUser(userId).map { it.map { entity -> entity.toMessage() } }
+    }
+
+    suspend fun searchConversations(query: String): List<Conversation> {
+        val messagesByContent = messageDao.searchMessagesByContent(query)
+        val userIdsFromMessages = messagesByContent.map { it.senderId }.toSet()
+
+        val conversationsFromMessages = messagesByContent.mapNotNull { message ->
+            userDao.getUserById(message.senderId)?.let {
+                Conversation(
+                    user = it.toUser(),
+                    latestMessage = message.toMessage(),
+                    unreadCount = 0
+                )
+            }
+        }
+
+        val usersByName = userDao.searchUsersByNameOrRemark(query)
+            .filterNot { it.id in userIdsFromMessages }
+
+        val conversationsFromUsers = usersByName.map { userEntity ->
+            val latestMessage = messageDao.getLatestMessageForUser(userEntity.id)
             Conversation(
                 user = userEntity.toUser(),
-                latestMessage = latestMessageEntity?.toMessage(),
-                unreadCount = unreadCount
+                latestMessage = latestMessage?.toMessage(),
+                unreadCount = 0
             )
+        }
+        
+        return (conversationsFromMessages + conversationsFromUsers).sortedByDescending {
+            it.latestMessage?.timestamp ?: 0
         }
     }
 
@@ -76,23 +111,19 @@ class AppRepository @Inject constructor(
                 val initialData = Json.decodeFromString<InitialData>(jsonString)
                 userDao.insertAll(initialData.users)
                 messageDao.insertAll(initialData.messages)
+
+                val allUsers = initialData.users
+                allUsers.forEach { user ->
+                    messageDao.getLatestMessageForUser(user.id)?.let { latestMessage ->
+                        userDao.updateLastMessageTimestamp(user.id, latestMessage.timestamp)
+                    }
+                }
             }
         }
     }
 
-    suspend fun updateRemark(userId: Int, remark: String?) {
-        userDao.updateRemark(userId, remark)
-    }
-
-    suspend fun setPinnedStatus(userId: Int, isPinned: Boolean) {
-        userDao.updatePinnedStatus(userId, isPinned)
-    }
-
-    suspend fun updateCardInteraction(messageId: Long, state: CardInteractionState) {
-        messageDao.updateCardState(messageId, state.name)
-    }
-    
-    suspend fun markMessagesAsRead(userId: Int) {
-        messageDao.markMessagesAsRead(userId)
-    }
+    suspend fun updateRemark(userId: Int, remark: String?) { userDao.updateRemark(userId, remark) }
+    suspend fun setPinnedStatus(userId: Int, isPinned: Boolean) { userDao.updatePinnedStatus(userId, isPinned) }
+    suspend fun updateCardInteraction(messageId: Long, state: CardInteractionState) { messageDao.updateCardState(messageId, state.name) }
+    suspend fun markMessagesAsRead(userId: Int) { messageDao.markMessagesAsRead(userId) }
 }
