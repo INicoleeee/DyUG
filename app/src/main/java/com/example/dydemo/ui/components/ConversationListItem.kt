@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -19,6 +20,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.dydemo.domain.model.CardInteractionState
 import com.example.dydemo.domain.model.Conversation
 import com.example.dydemo.domain.model.Message
@@ -114,7 +116,15 @@ private fun MessageIndicator(message: Message, onCardActionClick: () -> Unit) {
     Box(modifier = Modifier.height(24.dp)) {
         when (message) {
             is Message.Image -> {
-                // This AsyncImage can remain as it is a small thumbnail
+                // 修复：添加图片缩略图的 AsyncImage 组件
+                AsyncImage(
+                    model = message.imageUrl,
+                    contentDescription = "消息缩略图",
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(RoundedCornerShape(4.dp)),
+                    contentScale = ContentScale.Crop
+                )
             }
             is Message.Card -> {
                 val (buttonText, isEnabled, buttonColor) = when (message.interactionState) {
