@@ -15,6 +15,12 @@
 | **依赖注入** | Hilt (Dagger) | |
 | **图片加载** | Coil | 专为 Jetpack Compose 设计的图片加载库。 |
 
+## 运行截图
+
+[//]: # (![App Screenshot]&#40;.app\src\main\assets\screenshot.png&#41;)
+[//]: # (![App Screenshot]&#40;D:\AndriodProjects\DyDemo\app\src\main\assets\screenshot.png&#41;)
+![App Screenshot](app/src/main/assets/screenshot.png)
+
 ## 主要功能
 
 *   **智能消息列表**：
