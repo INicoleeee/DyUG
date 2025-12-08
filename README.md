@@ -19,7 +19,7 @@
 
 [//]: # (![App Screenshot]&#40;.app\src\main\assets\screenshot.png&#41;)
 [//]: # (![App Screenshot]&#40;D:\AndriodProjects\DyDemo\app\src\main\assets\screenshot.png&#41;)
-![App Screenshot](app/src/main/assets/screenshot.png)
+![App Screenshot](app/src/main/assets/jietu.png)
 
 ## 主要功能
 
