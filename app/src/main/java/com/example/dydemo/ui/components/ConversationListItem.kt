@@ -116,7 +116,7 @@ private fun MessageIndicator(message: Message, onCardActionClick: () -> Unit) {
     Box(modifier = Modifier.height(24.dp)) {
         when (message) {
             is Message.Image -> {
-                // 修复：添加图片缩略图的 AsyncImage 组件
+                //添加图片缩略图的 AsyncImage 组件
                 AsyncImage(
                     model = message.imageUrl,
                     contentDescription = "消息缩略图",

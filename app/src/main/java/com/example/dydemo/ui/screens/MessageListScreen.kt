@@ -16,8 +16,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
@@ -45,13 +48,26 @@ fun MessageListScreen(
     var showRemarkDialog by remember { mutableStateOf(false) }
     var selectedUser by remember { mutableStateOf<User?>(null) }
 
+    // 自动滚动
     LaunchedEffect(conversations) {
         snapshotFlow { conversations.itemSnapshotList.firstOrNull() }
             .distinctUntilChanged()
             .filter { it != null }
-            .collect { 
-                listState.animateScrollToItem(0)
+            .collect { listState.animateScrollToItem(0) }
+    }
+
+    // 返回刷新
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                conversations.refresh()
             }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
     Scaffold(
@@ -107,18 +123,18 @@ private fun SearchBarPlaceholder(onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
-            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp)) // <-- 修改背景色
+            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
             .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 12.dp), // <-- 修改 Padding
+            .padding(horizontal = 10.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             imageVector = Icons.Default.Search,
             contentDescription = "搜索",
-            tint = MaterialTheme.colorScheme.onSurface // <-- 修改图标颜色
+            tint = MaterialTheme.colorScheme.onSurface
         )
         Spacer(modifier = Modifier.width(8.dp))
-        Text("搜索", color = MaterialTheme.colorScheme.onSurface) // <-- 修改文本颜色
+        Text("搜索", color = MaterialTheme.colorScheme.onSurface)
     }
 }
 
@@ -147,6 +163,7 @@ private fun MessageListContent(
                 conversations[index]?.let { conversation ->
                     ConversationListItem(
                         conversation = conversation,
+                        highlightQuery = null, // 主列表不需要高亮
                         onItemClick = onItemClick,
                         onAvatarClick = { onAvatarClick(conversation.user) },
                         onCardActionClick = onCardActionClick

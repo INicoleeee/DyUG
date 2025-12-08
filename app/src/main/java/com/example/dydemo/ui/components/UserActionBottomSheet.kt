@@ -25,9 +25,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -85,26 +85,12 @@ fun UserActionBottomSheet(
         Column(modifier = Modifier.padding(end=16.dp, start = 16.dp, bottom = 16.dp)) {
             Spacer(Modifier.width(16.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // 使用新的 UserAvatar 组件
                 UserAvatar(user = user, size = 80.dp)
-
                 Spacer(Modifier.width(16.dp))
-
                 Column {
-                    Text(
-                        text = displayName,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-
+                    Text(text = displayName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
                     Spacer(modifier = Modifier.height(2.dp))
-
-                    Text(
-                        text = subtitleText,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                        fontSize = 14.sp
-                    )
+                    Text(text = subtitleText, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f), fontSize = 14.sp)
                 }
             }
         }
@@ -128,7 +114,7 @@ fun UserActionBottomSheet(
                         .fillMaxWidth()
                         .weight(1.1f)
                 ) {
-                    PinnedChatItem(user = user, onSetPinned = onSetPinned)
+                    PinnedChatItem(initialIsPinned = user.isPinned, onSetPinned = onSetPinned)
                 }
 
                 Spacer(
@@ -187,9 +173,11 @@ private fun ActionItem(
 
 @Composable
 private fun PinnedChatItem(
-    user: User,
+    initialIsPinned: Boolean,
     onSetPinned: (Boolean) -> Unit
 ) {
+    // 使用本地状态驱动 UI，保证即时响应
+    var isPinned by remember { mutableStateOf(initialIsPinned) }
 
     Row(
         modifier = Modifier
@@ -221,6 +209,18 @@ private fun PinnedChatItem(
                 )
             }
         }
-        Switch(checked = user.isPinned, onCheckedChange = onSetPinned)
+        Switch(
+            checked = isPinned, 
+            onCheckedChange = { newStatus ->
+                isPinned = newStatus
+                onSetPinned(newStatus)
+            },
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = MaterialTheme.colorScheme.onPrimary, // 修复：滑块使用 onPrimary 颜色 (白色)
+                checkedTrackColor = MaterialTheme.colorScheme.primary, // 修复：轨道使用 primary 颜色 (粉色)
+                uncheckedThumbColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        )
     }
 }
